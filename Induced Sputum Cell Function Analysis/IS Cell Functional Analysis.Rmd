@@ -1,23 +1,46 @@
-rm(list = ls(all.names = TRUE))
+---
+title: "IS Cell Functional Analysis"
+author: "Elise Hickman"
+date: "1/26/2022"
+output: html_document
+---
 
-# If needed, install and load packages
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, echo = TRUE)
+```
+
+### Setup
+
+```{r eval = FALSE}
+rm(list = ls(all.names = TRUE)) # clears global environ.
+```
+```{r load-packages, include = FALSE}
+# Load packages
 library(readxl) # for data import 
 library(table1) # to make tables
 library(tidyverse) # for data cleaning and organization
 library(ggplot2) # for bar plot
 library(ggsignif) # for bar plot
 library(ggpubr) # for bar plot
+```
+```{r eval = FALSE}
+# Load packages
+library(readxl) # for data import 
+library(table1) # to make tables
+library(tidyverse) # for data cleaning and organization
+library(ggplot2) # for bar plot
+library(ggsignif) # for bar plot
+library(ggpubr) # for bar plot
+```
 
-##############################################################
-####### 1. Import data
-##############################################################
+### Import data
+```{r}
+all_data <- data.frame(read_excel("Input Data/2021_12_28 Sputum Cell Functional Data.xlsx"))
+head(all_data)
+```
 
-all_data <- data.frame(read_excel("Induced Sputum Cell Function Analysis/Input Data/2021_12_28 Sputum Cell Functional Data.xlsx"))
-
-##############################################################
-####### 2. Demographics table
-##############################################################
-
+### Make demographics table
+```{r}
 # Change labels
 all_data$Group <- factor(all_data$Group, 
                          levels = c("Nonvaper", "4th Gen"),
@@ -66,11 +89,10 @@ table1(~ Sex + Race + Hispanic + Age + BMI + Device | Group,
        render.missing = NULL,
        overall = NULL,
        extra.col = list(`P-value` = pvalue))
+```
 
-##############################################################
-####### 3. Sputum cell characteristics table
-##############################################################
-
+### Make sputum cell differential summary table
+```{r}
 # Statistical test of normality
 diffs_normality <- apply(all_data[11:16], 2, shapiro.test)
 
@@ -104,12 +126,11 @@ table1(~ SelectSampleWeight + TotalCellCount + CellsPerMG + PercPMN + PercMac + 
        render.continuous = my.render.cont.mean.sem,
        overall = NULL,
        extra.col = list(`P-value` = pvalue))
+```
 
-##############################################################
-####### 4. Overall demographics assessment 
-##############################################################
-
-## JC-1
+### Assess associations with sex, age, and BMI
+JC-1:
+```{r}
 shapiro.test(all_data$JC1)
 
 JC1_sex_wilcox <- wilcox.test(JC1 ~ Sex, all_data)
@@ -123,8 +144,10 @@ JC1_spearman_age
 
 JC1_spearman_BMI <- cor.test(all_data$BMI, all_data$JC1, method = "spearman")
 JC1_spearman_BMI
+```
 
-## Phagocytosis
+Phagocytosis:
+```{r}
 shapiro.test(all_data$Phagocytosis)
 
 phagocytosis_sex <- wilcox.test(Phagocytosis ~ Sex, all_data)
@@ -135,28 +158,21 @@ phagocytosis_spearman_age
 
 phagocytosis_spearman_BMI <- cor.test(all_data$BMI, all_data$Phagocytosis, method = "spearman")
 phagocytosis_spearman_BMI
+```
 
-##############################################################
-####### 5. Group Comparisons
-##############################################################
-
-## JC-1
-
-# Statistical tests
+### Comparisons between vapers and non-vapers
+JC-1 statistical testing:
+```{r}
 JC1_group_ttest <- t.test(JC1 ~ Group, all_data)
 JC1_group_ttest$p.value
 
 JC1_group_wilcox <- wilcox.test(JC1 ~ Group, all_data)
 JC1_group_wilcox$p.value
-
+```
+JC-1 graphing:
+```{r}
 # Set theme
 theme_set(theme_bw())
-
-# Open graphical device
-pdf("Induced Sputum Cell Function Analysis/Output Figures/SputumCellJC1Groups.pdf",
-    colormodel = "cmyk",
-    width = 7,
-    height = 5.5)
 
 set.seed(0817)
 
@@ -183,20 +199,16 @@ ggplot(all_data, aes(x = Group, y = JC1, fill = Group)) +
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         panel.border = element_rect(colour = "black", fill=NA, size=1))
+```
 
-# Close graphical device
-dev.off()
-
-## PHAGOCYTOSIS
+Phagocytosis statistical testing:
+```{r}
 phagocytosis_group_wilcox <- wilcox.test(Phagocytosis ~ Group, all_data)
 phagocytosis_group_wilcox$p.value
+```
 
-# Open graphical device
-pdf("Induced Sputum Cell Function Analysis/Output Figures/SputumCellPhagocytosisGroups.pdf",
-    colormodel = "cmyk",
-    width = 7,
-    height = 5.5)
-
+Phagocytosis graphing:
+```{r}
 set.seed(0817)
 
 ggplot(all_data, aes(x = Group, y = Phagocytosis, fill = Group)) + 
@@ -222,14 +234,10 @@ ggplot(all_data, aes(x = Group, y = Phagocytosis, fill = Group)) +
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         panel.border = element_rect(colour = "black", fill=NA, size=1))
+```
 
-# Close graphical device
-dev.off()
-
-##############################################################
-####### 6. JC-1 with CCCP Control Analysis
-##############################################################
-
+### JC-1 with CCCP Control Comparison
+```{r}
 # Test normality
 shapiro.test(all_data$JC1withCCCP)
 
@@ -245,12 +253,6 @@ all_data_forgraph <- all_data_forgraph %>% pivot_longer(!SubjectID, names_to = "
 all_data_forgraph$Group <- factor(all_data_forgraph$Group,
                                   levels = c("JC1", "JC1withCCCP"),
                                   labels = c("JC-1", "JC-1 + CCCP"))
-
-# Open graphical device
-pdf("Induced Sputum Cell Function Analysis/Output Figures/SputumCellJC1vCCCP.pdf",
-    colormodel = "cmyk",
-    width = 5,
-    height = 5.5)
 
 # Graph
 ggplot(all_data_forgraph, aes(x = Group, y = MFI)) +
@@ -275,6 +277,4 @@ ggplot(all_data_forgraph, aes(x = Group, y = MFI)) +
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         panel.border = element_rect(colour = "black", fill=NA, size=1))
-
-# Close graphical device
-dev.off()
+```
